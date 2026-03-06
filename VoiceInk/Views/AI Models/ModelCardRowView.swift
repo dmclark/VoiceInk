@@ -58,6 +58,14 @@ struct ModelCardRowView: View {
                         setDefaultAction: setDefaultAction
                     )
                 }
+            case .voiceitt:
+                if let cloudModel = model as? CloudModel {
+                    VoiceittModelCardView(
+                        model: cloudModel,
+                        isCurrent: isCurrent,
+                        setDefaultAction: setDefaultAction
+                    )
+                }
             case .groq, .elevenLabs, .deepgram, .mistral, .gemini, .soniox:
                 if let cloudModel = model as? CloudModel {
                     CloudModelCardView(

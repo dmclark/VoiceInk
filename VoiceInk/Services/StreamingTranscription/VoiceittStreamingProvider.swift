@@ -27,6 +27,9 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
     }
 
     func connect(model: any TranscriptionModel, language: String?) async throws {
+        // Refresh token if needed before connecting
+        try? await VoiceittAuthService.shared.refreshTokenIfNeeded()
+
         guard let token = APIKeyManager.shared.getAPIKey(forProvider: "voiceitt"), !token.isEmpty else {
             throw StreamingTranscriptionError.missingAPIKey
         }
