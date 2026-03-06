@@ -22,7 +22,8 @@ final class APIKeyManager {
         "soniox": "sonioxAPIKey",
         "openai": "openAIAPIKey",
         "anthropic": "anthropicAPIKey",
-        "openrouter": "openRouterAPIKey"
+        "openrouter": "openRouterAPIKey",
+        "voiceitt": "voiceittAPIKey"
     ]
 
     /// Legacy UserDefaults to Keychain key mapping for migration.

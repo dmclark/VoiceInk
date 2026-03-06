@@ -82,6 +82,8 @@ class TranscriptionServiceRegistry {
             return model.name == "voxtral-mini-transcribe-realtime-2602"
         case .soniox:
             return model.name == "stt-rt-v4"
+        case .voiceitt:
+            return true
         default:
             return false
         }

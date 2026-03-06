@@ -331,16 +331,28 @@ import Foundation
             supportedLanguages: getLanguageDictionary(isMultilingual: true, provider: .soniox)
         ),
         CloudModel(
-            name: "stt-rt-v4",
-            displayName: "Soniox Realtime V4",
-            description: "Soniox real-time streaming model v4 for low-latency transcription",
-            provider: .soniox,
-            speed: 0.99,
-            accuracy: 0.97,
-            isMultilingual: true,
-            supportedLanguages: getLanguageDictionary(isMultilingual: true, provider: .soniox)
+           name: "stt-rt-v4",
+           displayName: "Soniox Realtime V4",
+           description: "Soniox real-time streaming model v4 for low-latency transcription",
+           provider: .soniox,
+           speed: 0.99,
+           accuracy: 0.97,
+           isMultilingual: true,
+           supportedLanguages: getLanguageDictionary(isMultilingual: true, provider: .soniox)
+        ),
+
+        // Voiceitt Model
+        CloudModel(
+           name: "voiceitt-personal",
+           displayName: "Voiceitt Personal Model",
+           description: "Voiceitt's per-user trained model for people with non-standard speech patterns",
+           provider: .voiceitt,
+           speed: 0.8,
+           accuracy: 0.9,
+           isMultilingual: false,
+           supportedLanguages: getLanguageDictionary(isMultilingual: false)
         )
-     ]
+        ]
  
      static let allLanguages = [
          "auto": "Auto-detect",
