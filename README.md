@@ -30,6 +30,8 @@ For build instructions, see our [Building Guide](BUILDING.md).
 ## Requirements
 
 - macOS 14.4 or later
+- **Accessibility permissions**: Grant VoiceInk access in **System Settings → Privacy & Security → Accessibility**
+- **AppleScript Paste**: If transcribed text is not being pasted into the active window, enable **"Use AppleScript Paste"** in VoiceInk settings. This is often needed for non-QWERTY keyboard layouts or when CGEvent-based paste doesn't work.
 
 ## License
 
