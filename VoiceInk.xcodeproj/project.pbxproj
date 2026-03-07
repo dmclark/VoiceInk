@@ -180,7 +180,8 @@
 				E1342C1E2EB4844800CED8A2 /* Atomics */,
 				E1F1037A2EF85FC700A4FF94 /* SelectedTextKit */,
 				E1438ED12F3F3D5E00DBE2A1 /* LLMkit */,
-			);
+				17E8C71B2F5B9377009DFB09 /* SocketIO */,
+				);
 			productName = VoiceInk;
 			productReference = E11473B02CBE0F0A00318EE4 /* VoiceInk.app */;
 			productType = "com.apple.product-type.application";
@@ -774,6 +775,11 @@
 			package = E1F103792EF85FC700A4FF94 /* XCRemoteSwiftPackageReference "SelectedTextKit" */;
 			productName = SelectedTextKit;
 		};
+                17E8C71B2F5B9377009DFB09 /* SocketIO */ = {
+                        isa = XCSwiftPackageProductDependency;
+                        package = 17E8C71A2F5B9377009DFB09 /* XCRemoteSwiftPackageReference "socket" */;
+                        productName = SocketIO;
+                };
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E11473A82CBE0F0A00318EE4 /* Project object */;
