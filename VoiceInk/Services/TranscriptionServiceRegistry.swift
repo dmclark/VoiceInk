@@ -66,6 +66,8 @@ class TranscriptionServiceRegistry {
             return PredefinedModels.models.first { $0.name == "voxtral-mini-latest" }
         case (.soniox, "stt-rt-v4"):
             return PredefinedModels.models.first { $0.name == "stt-async-v4" }
+        case (.voiceitt, _):
+            return PredefinedModels.models.first { $0.provider == .groq && $0.name == "whisper-large-v3-turbo" }
         default:
             return nil
         }

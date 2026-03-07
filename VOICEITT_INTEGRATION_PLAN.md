@@ -28,6 +28,7 @@ Audio format already matches: VoiceInk's `CoreAudioRecorder` outputs **16kHz mon
 **Server URL:** `https://casr-dictation-recognition.voiceitt.com`
 **Transport:** Socket.IO (`/socket.io` path, `websocket` + `polling` transports)
 **Auth:** Passed in Socket.IO `auth` field: `{ token, refresh_token }`
+**Swift note:** `socket.io-client-swift` v16.x has no `.auth` config option. Use `socket.connect(withPayload: ["token": t, "refresh_token": rt])` instead — this sends credentials in the Socket.IO CONNECT packet body (`socket.handshake.auth`). Do NOT use `.connectParams` which puts them in the URL query string and the server ignores them.
 
 ### Client → Server Events
 
@@ -209,17 +210,17 @@ disconnect():
 
 ## Risks & Open Questions
 
-1. **Socket.IO Swift client compatibility** — socket.io-client-swift must support the Socket.IO protocol version used by Voiceitt's server. Test with v2 vs v4 protocol.
+1. **Socket.IO Swift client compatibility** — ✅ RESOLVED. Server uses Socket.IO v3/v4. Use `.version(.three)` config and `socket.connect(withPayload:)` for auth. `.connectParams` does NOT work (puts tokens in URL query, server ignores). See `notes/debugging.md`.
 
 2. **Audio chunk format** — VoiceInk provides `Data` (raw PCM Int16 bytes). Need to convert to `[Int16]` array for `stream_audio_samples`, or send as binary via `stream_compressed_audio`. Test which the server prefers from a non-JS client.
 
-3. **No batch/REST fallback** — If WebSocket fails, there's no file-upload fallback. The `StreamingTranscriptionSession` fallback mechanism won't work. May need to disable fallback for Voiceitt or show a clear error.
+3. **No batch/REST fallback** — ✅ RESOLVED. Added guard in `TranscriptionSession.swift` — if streaming fails and the fallback provider's API key is missing, surfaces the streaming error instead of a confusing "API key missing" for the fallback provider (Groq). See `notes/debugging.md`.
 
 4. **Auth UX** — Other providers use a simple API key paste. Voiceitt needs email/password login UI + token management. This is the largest UX addition.
 
 5. **Token refresh in Swift** — Need to replicate the SDK's `VoiceittAuthProvider` token refresh logic. Examine `src/lib/auth.ts` for the refresh endpoint.
 
-6. **App ID / API Key** — These are developer credentials (not user credentials). Need to decide: hardcode in app, or require user to provide? If hardcoding, they're embedded in the binary.
+6. **App ID / API Key** — These are developer credentials (not user credentials). Currently user-provided via the VoiceittModelCardView login form. Stored in Keychain as `voiceittAppId` / `voiceittApiKey`.
 
 7. **Model lifecycle UX** — Model loading can take several seconds. VoiceInk's UI may need a "model loading..." state between "connecting" and "ready". Other providers don't have this delay.
 

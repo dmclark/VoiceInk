@@ -28,13 +28,21 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
 
     func connect(model: any TranscriptionModel, language: String?) async throws {
         // Refresh token if needed before connecting
-        try? await VoiceittAuthService.shared.refreshTokenIfNeeded()
+        do {
+            try await VoiceittAuthService.shared.refreshTokenIfNeeded()
+            logger.notice("Token refresh check completed")
+        } catch {
+            logger.error("Token refresh failed: \(error.localizedDescription, privacy: .public)")
+            // Continue — the existing token may still be valid
+        }
 
         guard let token = APIKeyManager.shared.getAPIKey(forProvider: "voiceitt"), !token.isEmpty else {
+            logger.error("No Voiceitt token found in keychain")
             throw StreamingTranscriptionError.missingAPIKey
         }
 
         let refreshToken = KeychainService.shared.getString(forKey: "voiceittRefreshToken") ?? ""
+        logger.notice("Connecting to Voiceitt CASR (token length: \(token.count, privacy: .public), has refresh: \(!refreshToken.isEmpty, privacy: .public))")
 
         connectionReady = false
         modelReady = false
@@ -42,8 +50,7 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
         let url = URL(string: "https://casr-dictation-recognition.voiceitt.com")!
         let manager = SocketManager(socketURL: url, config: [
             .log(false),
-            .forceWebsockets(true),
-            .connectParams(["token": token, "refresh_token": refreshToken])
+            .version(.three)
         ])
         self.manager = manager
 
@@ -60,52 +67,77 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
                 guard let self, !resumed else { return }
                 if self.connectionReady && self.modelReady {
                     resumed = true
+                    self.logger.notice("Voiceitt streaming ready (connection + model)")
                     self.eventsContinuation?.yield(.sessionStarted)
                     continuation.resume()
                 }
             }
 
             socket.on("connection_ready") { [weak self] _, _ in
+                self?.logger.notice("Received connection_ready")
                 self?.connectionReady = true
                 readyCheck()
             }
 
             socket.on("model_ready") { [weak self] _, _ in
+                self?.logger.notice("Received model_ready")
                 self?.modelReady = true
                 readyCheck()
             }
 
-            socket.on("model_missing") { _, _ in
+            socket.on("model_missing") { [weak self] _, _ in
                 guard !resumed else { return }
                 resumed = true
+                self?.logger.error("Received model_missing from server")
                 continuation.resume(throwing: StreamingTranscriptionError.serverError("Voiceitt model not found for this user"))
             }
 
-            socket.on("model_loading_error") { _, _ in
+            socket.on("model_loading_error") { [weak self] data, _ in
                 guard !resumed else { return }
                 resumed = true
+                let detail = (data.first as? String) ?? (data.first.map { "\($0)" } ?? "")
+                self?.logger.error("Received model_loading_error: \(detail, privacy: .public)")
                 continuation.resume(throwing: StreamingTranscriptionError.serverError("Voiceitt model failed to load"))
             }
 
-            socket.on(clientEvent: .error) { data, _ in
+            socket.on(clientEvent: .statusChange) { [weak self] data, _ in
+                let status = data.first.map { "\($0)" } ?? "unknown"
+                self?.logger.notice("Socket.IO status change: \(status, privacy: .public)")
+            }
+
+            socket.on(clientEvent: .error) { [weak self] data, _ in
                 guard !resumed else { return }
                 resumed = true
-                let message = (data.first as? String) ?? "Connection error"
+                // Socket.IO errors can be String, NSError, or other types
+                let message: String
+                if let str = data.first as? String {
+                    message = str
+                } else if let err = data.first as? NSError {
+                    message = "\(err.domain) \(err.code): \(err.localizedDescription)"
+                } else {
+                    message = data.first.map { "\($0)" } ?? "Connection error (no details)"
+                }
+                self?.logger.error("Socket.IO error during setup: \(message, privacy: .public)")
                 continuation.resume(throwing: StreamingTranscriptionError.connectionFailed(message))
             }
 
-            socket.on(clientEvent: .disconnect) { _, _ in
+            socket.on(clientEvent: .disconnect) { [weak self] data, _ in
                 guard !resumed else { return }
                 resumed = true
-                continuation.resume(throwing: StreamingTranscriptionError.connectionFailed("Disconnected during setup"))
+                let reason = (data.first as? String) ?? "unknown reason"
+                self?.logger.error("Socket.IO disconnected during setup: \(reason, privacy: .public)")
+                continuation.resume(throwing: StreamingTranscriptionError.connectionFailed("Disconnected during setup (\(reason))"))
             }
 
-            socket.connect()
+            // Pass auth in the Socket.IO CONNECT packet body (socket.handshake.auth),
+            // not as URL query params which the server ignores.
+            socket.connect(withPayload: ["token": token, "refresh_token": refreshToken])
 
             // Timeout after 120 seconds (model loading can be slow)
-            DispatchQueue.global().asyncAfter(deadline: .now() + 120) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 120) { [weak self] in
                 guard !resumed else { return }
                 resumed = true
+                self?.logger.error("Socket.IO connection timed out after 120s")
                 continuation.resume(throwing: StreamingTranscriptionError.timeout)
             }
         }
@@ -119,13 +151,11 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
             throw StreamingTranscriptionError.notConnected
         }
 
-        // Convert raw PCM Int16 LE bytes to [Int16] array
-        let samples = data.withUnsafeBytes { buffer -> [Int16] in
-            let int16Buffer = buffer.bindMemory(to: Int16.self)
-            return Array(int16Buffer)
-        }
-
-        socket.emit("stream_audio_samples", samples, "int16")
+        // Send raw PCM Int16 LE bytes as a binary attachment (Foundation.Data).
+        // The JS SDK sends ArrayBuffer which Socket.IO frames as binary;
+        // socket.io-client-swift only treats Foundation.Data as binary — an [Int16]
+        // array would be JSON-serialized as numbers, which the server can't decode.
+        socket.emit("stream_audio_samples", data, "int16")
     }
 
     func commit() async throws {

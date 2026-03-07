@@ -95,12 +95,15 @@ final class StreamingTranscriptionSession: TranscriptionSession {
             throw VoiceInkEngineError.transcriptionFailed
         }
 
+        var streamingError: Error?
+
         if !streamingFailed {
             do {
                 let text = try await streamingService.stopAndGetFinalText()
                 logger.notice("Streaming transcript received")
                 return text
             } catch {
+                streamingError = error
                 logger.error("❌ Streaming failed, falling back to batch: \(error.localizedDescription, privacy: .public)")
                 streamingService.cancel()
             }
@@ -110,6 +113,18 @@ final class StreamingTranscriptionSession: TranscriptionSession {
 
         // Use fallbackModel if set — streaming-only models are rejected by the batch REST API.
         let modelForFallback = fallbackModel ?? model
+
+        // If the fallback requires a different provider's API key, verify it exists
+        // before attempting fallback. Otherwise the user sees a confusing "API key missing"
+        // error for a provider they never intended to use.
+        if modelForFallback.provider != model.provider,
+           !APIKeyManager.shared.hasAPIKey(forProvider: modelForFallback.provider.rawValue) {
+            let streamingReason = streamingError?.localizedDescription ?? "unknown error"
+            throw StreamingTranscriptionError.connectionFailed(
+                "\(model.provider.rawValue) streaming failed (\(streamingReason)). No fallback API key (\(modelForFallback.provider.rawValue)) is configured."
+            )
+        }
+
         logger.notice("Using batch fallback for \(model.displayName, privacy: .public) with model \(modelForFallback.displayName, privacy: .public)")
         return try await fallbackService.transcribe(audioURL: audioURL, model: modelForFallback)
     }
