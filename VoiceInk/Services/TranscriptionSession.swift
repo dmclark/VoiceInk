@@ -56,6 +56,8 @@ final class StreamingTranscriptionSession: TranscriptionSession {
     private var streamingFailed = false
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "StreamingTranscriptionSession")
 
+    private var connectTask: Task<Void, Error>?
+
     init(streamingService: StreamingTranscriptionService, fallbackService: TranscriptionService, fallbackModel: (any TranscriptionModel)? = nil) {
         self.streamingService = streamingService
         self.fallbackService = fallbackService
@@ -71,7 +73,7 @@ final class StreamingTranscriptionSession: TranscriptionSession {
             service?.sendAudioChunk(data)
         }
 
-        Task.detached { [weak self] in
+        connectTask = Task.detached { [weak self] in
             guard let self = self else { return }
             do {
                 try await self.streamingService.startStreaming(model: model)
@@ -84,6 +86,7 @@ final class StreamingTranscriptionSession: TranscriptionSession {
                     self.logger.error("❌ Failed to start streaming, will fall back to batch: \(desc, privacy: .public)")
                     self.streamingFailed = true
                 }
+                throw error
             }
         }
 
@@ -96,6 +99,20 @@ final class StreamingTranscriptionSession: TranscriptionSession {
         }
 
         var streamingError: Error?
+
+        // Wait for the background connection to finish before attempting to get final text.
+        // This is critical for slow-connecting providers like Voiceitt whose model loading
+        // can take several seconds — without this, stopAndGetFinalText() would see
+        // state == .connecting and throw notConnected.
+        if let connectTask {
+            do {
+                try await connectTask.value
+            } catch {
+                streamingFailed = true
+                streamingError = error
+            }
+            self.connectTask = nil
+        }
 
         if !streamingFailed {
             do {
@@ -130,6 +147,8 @@ final class StreamingTranscriptionSession: TranscriptionSession {
     }
 
     func cancel() {
+        connectTask?.cancel()
+        connectTask = nil
         streamingService.cancel()
     }
 }

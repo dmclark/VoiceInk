@@ -41,13 +41,39 @@ struct MiniRecorderView<S: RecorderStateProvider & ObservableObject>: View {
         .frame(height: mainContentHeight)
     }
 
+    private var partialTranscriptSection: some View {
+        TimelineView(.animation(minimumInterval: 0.1)) { _ in
+            let hasText = stateProvider.recordingState == .recording && !stateProvider.partialTranscript.isEmpty
+
+            VStack(spacing: 0) {
+                if hasText {
+                    Divider()
+                        .background(Color.white.opacity(0.15))
+
+                    Text(stateProvider.partialTranscript)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(2)
+                        .truncationMode(.head)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: hasText)
+        }
+    }
+
     var body: some View {
         if windowManager.isVisible {
-            contentLayout
-                .frame(width: width)
-                .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            VStack(spacing: 0) {
+                contentLayout
+                partialTranscriptSection
+            }
+            .frame(width: width)
+            .background(Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
     }
 }
