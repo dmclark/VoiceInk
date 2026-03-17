@@ -34,7 +34,7 @@ The core integration is done. All major components exist and are wired together:
 
 | Issue | Priority | Status | Details |
 |---|---|---|---|
-| Validate `set_options` timing | High | ⬜ TODO | Currently sent after `model_ready`. Plan says send on socket open. Verify against VS Code extension behavior. |
+| Validate `set_options` timing | High | ✅ Done | Moved to `clientEvent: .connect` handler (transport open), matching the JS SDK's `socket.io.on("open")` timing. Was previously sent after `model_ready` which was too late. |
 | `reset_alb_cookies` handling | Medium | ⬜ Partial | Currently emits an error event. Should either reconnect transparently or surface a clear retry message. |
 | Groq fallback policy for Voiceitt | Medium | ⬜ TODO | Silent fallback to Groq Whisper is bad for non-standard speech users — Groq won't understand them. Consider disabling fallback for `.voiceitt` or making it explicit. |
 | `save_audio` privacy decision | Low | ⬜ TODO | Currently hardcoded `true` in `set_options`. Should be `false` unless user opts in or Voiceitt requires it. |
@@ -183,7 +183,7 @@ This ensures the streaming service reaches `.streaming` state before we try to f
 
 4. **Connect/stop race** — ✅ RESOLVED. `StreamingTranscriptionSession` now awaits the connection task in `transcribe()` before calling `stopAndGetFinalText()`.
 
-5. **`set_options` timing** — ⚠️ OPEN. Currently sent after `model_ready`. The plan originally said send on socket open. Need to verify which the server expects by comparing with the working VS Code extension.
+5. **`set_options` timing** — ✅ RESOLVED. The JS SDK sends `set_options` on `socket.io.on("open")` (transport open, before `connection_ready`/`model_ready`). Swift code now sends it in the `clientEvent: .connect` handler to match.
 
 6. **`reset_alb_cookies`** — ⚠️ OPEN. Currently emits error. v1: fail with clear retry message. v2: transparent reconnect if it proves common.
 
@@ -210,6 +210,12 @@ This ensures the streaming service reaches `.streaming` state before we try to f
 | `VoiceInk/Views/AI Models/VoiceittModelCardView.swift` | ✅ Login UI |
 | `VoiceInk/Views/AI Models/ModelManagementView.swift` | ✅ Voiceitt in provider list |
 | `VoiceInk/Views/Recorder/MiniRecorderView.swift` | ✅ Partial transcript display added |
+
+---
+
+## VoiceInk's Recommended Models — Limitations & Costs
+
+See [notes/llmms.md](notes/llmms.md) for detailed rate limits, free tier constraints, and first paid tier pricing for all recommended transcription and enhancement providers (Groq, Cerebras, Gemini, OpenRouter).
 
 ---
 
