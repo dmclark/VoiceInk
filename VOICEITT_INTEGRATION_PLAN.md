@@ -70,7 +70,7 @@ Audio format already matches: VoiceInk's `CoreAudioRecorder` outputs **16kHz mon
 
 | Event | Payload | When |
 |---|---|---|
-| `set_options` | `{ recognition_mode: "dictation", save_audio: true }` | On socket open (⚠️ verify timing) |
+| `set_options` | `{ recognition_mode: "dictation", save_audio: true }` | On socket connect (✅ verified) |
 | `stream_audio_samples` | `(Data, "int16")` | Each audio chunk (binary Data, not [Int16] array) |
 | `stream_compressed_audio` | `(ArrayBuffer, mimeType)` | Alt: compressed audio |
 | `refresh_token` | `{ token: "..." }` | When token refreshed |
@@ -205,7 +205,7 @@ This ensures the streaming service reaches `.streaming` state before we try to f
 | `VoiceInk/Services/StreamingTranscription/StreamingTranscriptionService.swift` | ✅ `.voiceitt` case in `createProvider` |
 | `VoiceInk/Services/TranscriptionServiceRegistry.swift` | ✅ `.voiceitt` in `supportsStreaming` + batch fallback to Groq |
 | `VoiceInk/Services/TranscriptionSession.swift` | ✅ Connect/stop race fix applied |
-| `VoiceInk/Services/StreamingTranscription/VoiceittStreamingProvider.swift` | ✅ Full Socket.IO provider (~217 lines) |
+| `VoiceInk/Services/StreamingTranscription/VoiceittStreamingProvider.swift` | ✅ Full Socket.IO provider (~223 lines) |
 | `VoiceInk/Services/VoiceittAuthService.swift` | ✅ Login + token management |
 | `VoiceInk/Views/AI Models/VoiceittModelCardView.swift` | ✅ Login UI |
 | `VoiceInk/Views/AI Models/ModelManagementView.swift` | ✅ Voiceitt in provider list |
@@ -215,14 +215,15 @@ This ensures the streaming service reaches `.streaming` state before we try to f
 
 ## VoiceInk's Recommended Models — Limitations & Costs
 
-See [notes/llmms.md](notes/llmms.md) for detailed rate limits, free tier constraints, and first paid tier pricing for all recommended transcription and enhancement providers (Groq, Cerebras, Gemini, OpenRouter).
+See [notes/llms.md](notes/llms.md) for detailed rate limits, free tier constraints, and first paid tier pricing for all recommended transcription and enhancement providers (Groq, Cerebras, Gemini, OpenRouter).
 
 ---
 
 ## Next Steps
 
-1. **Verify `set_options` timing** — Compare current code with the working VS Code extension (`/Users/dzc86/voiceitt/src/voiceittSocket.ts`). Move to socket open if needed.
-2. **End-to-end test** — Login → select Voiceitt model → record → verify partial + final transcription.
-3. **Decide fallback policy** — Disable silent Groq fallback for Voiceitt, or surface it explicitly.
-4. **Handle `reset_alb_cookies`** — Start with fail-fast + clear error message.
-5. **Privacy** — Change `save_audio` to `false` by default.
+1. **End-to-end test** — Login → select Voiceitt model → record → verify partial + final transcription.
+2. **Decide fallback policy** — Disable silent Groq fallback for Voiceitt, or surface it explicitly. The `StreamingTranscriptionSession` already guards against missing fallback API keys, but the fundamental issue remains: even if the Groq key exists, Groq Whisper won't help users with non-standard speech. Consider setting `fallbackModel: nil` for `.voiceitt` in `TranscriptionServiceRegistry.batchFallbackModel()`.
+3. **Handle `reset_alb_cookies`** — Start with fail-fast + clear error message.
+4. **Privacy** — Change `save_audio` to `false` by default.
+5. **Model loading UX** — The `RecordingState` enum has no `.connecting` state. While the connection awaits in `transcribe()`, the recorder shows `.transcribing`. Consider adding a `.connecting` or `.preparingModel` state so the UI can display "Loading personal model…" during the multi-second Voiceitt model load.
+6. **Notch recorder partials** — Partial transcript display was added to `MiniRecorderView` but not to `NotchRecorderView`. Add it for parity if the notch style is used.
