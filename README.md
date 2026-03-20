@@ -30,8 +30,23 @@ For build instructions, see our [Building Guide](BUILDING.md).
 ## Requirements
 
 - macOS 14.4 or later
-- **Accessibility permissions**: Grant VoiceInk access in **System Settings → Privacy & Security → Accessibility**
-- **AppleScript Paste**: If transcribed text is not being pasted into the active window, enable **"Use AppleScript Paste"** in VoiceInk settings. This is often needed for non-QWERTY keyboard layouts or when CGEvent-based paste doesn't work.
+
+## Documentation
+
+- [Building from Source](BUILDING.md) - Detailed instructions for building the project
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to VoiceInk
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Our community standards
+
+## Contributing
+
+This project is **not accepting pull requests** at this time. You're welcome to fork and modify VoiceInk for your own use.
+
+You can still contribute by:
+- Reporting bugs via [issues](https://github.com/Beingpax/VoiceInk/issues)
+- Suggesting features or enhancements
+- Improving documentation via issues
+
+For more details, see our [Contributing Guidelines](CONTRIBUTING.md). For build instructions, see our [Building Guide](BUILDING.md).
 
 ## License
 
