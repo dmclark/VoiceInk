@@ -100,6 +100,13 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
                 continuation.resume(throwing: StreamingTranscriptionError.serverError("Voiceitt model failed to load"))
             }
 
+            // Send set_options on connect — the JS SDK sends this on transport open,
+            // before connection_ready/model_ready. The server may need it to begin model loading.
+            socket.on(clientEvent: .connect) { [weak self] _, _ in
+                self?.logger.notice("Socket.IO connected — sending set_options")
+                socket.emit("set_options", ["recognition_mode": "dictation", "save_audio": true])
+            }
+
             socket.on(clientEvent: .statusChange) { [weak self] data, _ in
                 let status = data.first.map { "\($0)" } ?? "unknown"
                 self?.logger.notice("Socket.IO status change: \(status, privacy: .public)")
@@ -142,8 +149,7 @@ final class VoiceittStreamingProvider: StreamingTranscriptionProvider {
             }
         }
 
-        // Send options after ready
-        socket.emit("set_options", ["recognition_mode": "dictation", "save_audio": true])
+
     }
 
     func sendAudioChunk(_ data: Data) async throws {
