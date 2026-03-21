@@ -15,11 +15,11 @@ echo "==> Fetching upstream ($UPSTREAM_REMOTE)..."
 git fetch "$UPSTREAM_REMOTE"
 
 echo "==> Updating local main from $UPSTREAM_REMOTE/$UPSTREAM_BRANCH..."
-git checkout main
+git switch main
 git merge "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" --no-edit
 
 echo "==> Merging main into $FEATURE_BRANCH..."
-git checkout "$FEATURE_BRANCH"
+git switch "$FEATURE_BRANCH"
 git merge main --no-edit
 
 echo "==> Done. You are now on '$FEATURE_BRANCH' with upstream changes merged."
