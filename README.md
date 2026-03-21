@@ -1,71 +1,67 @@
-<div align="center">
-  <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
-  <h1>VoiceInk (Experimental Fork)</h1>
-  <p>Voice to text app for macOS to transcribe what you say to text almost instantly</p>
+# VoiceInk for Voiceitt (Experimental Fork)
+  
+## **What is VoiceInk?** 
 
-  > ⚠️ **This is an unofficial, experimental fork.** For the official project, please visit [Beingpax/VoiceInk](https://github.com/Beingpax/VoiceInk).
+A native macOS app (Swift / SwiftUI, requires macOS 14.4+) that transcribes speech to text and pastes it at the cursor. It supports local Whisper models, NVIDIA Parakeet, Apple's native Speech framework, and cloud providers (Groq, ElevenLabs, Deepgram, Mistral, Gemini, Soniox) — including real-time streaming for some of them. It optionally enhances transcriptions with LLM-powered AI before pasting. You can find all the information and download the official app from [tryvoiceink.com](https://tryvoiceink.com).
 
-  [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-  ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
-  <p>
-    <a href="https://tryvoiceink.com">Website (official)</a> •
-    <a href="https://www.youtube.com/@tryvoiceink">YouTube (official)</a>
-  </p>
-</div>
+## What is Voiceitt?
 
----
+Voiceitt is a speech recognition service that supports  ß enables accurate real time voice transcription  for people with speech disabilities (e.g., dysarthria, aphasia due to cerebral palsy, stroke, ALS, or other conditions), aging adults, and accented speakers. Users [sign up](https://web.voiceitt.com/sign-up) and create a personal by profile with a minimum of 50 word training. They then can use the service in a web based app, Zoom or Microsoft Teams
 
-> **Note:** This is an experimental fork maintained by [@dmclark](https://github.com/dmclark) for personal exploration and testing. It may contain unstable or incomplete changes. The motivation is to explore the potential of VoiceInk using [Voiceeitt](https://voiceitt.com).   If you're looking for the official, supported version of VoiceInk, please go to [Beingpax/VoiceInk](https://github.com/Beingpax/VoiceInk).
+## What is this project & why does it exist?
 
-VoiceInk is a native macOS application that transcribes what you say to text almost instantly. You can find all the information and download the official app from [tryvoiceink.com](https://tryvoiceink.com).
+Currently, this is a successful proof of concept that is evolving. It uses the source code of Voiceink and adds Voiceitt as a transcription provider. It is designed to be a drop-in replacement for the existing transcription providers, allowing for the use of the Voiceitt service across all applications on the MacOS platform with the addition of the post-processing available in VoiceInk. This work is never intended to be merged back into Voiceink , and the other transcription providers may be eventually stripped out so that this is only a client for Voiceitt.
 
-## Get Started
+This project developed out of personal passion and interest. [I](https://www.linkedin.com/in/dclark7/) am a developer/technologist (currently unemployed), who has cerebral palsy. I Googled one no one day out of frustration and found Voiceitt. I fell in love with it immediately --  it has been transformational. After discovering it had an API, I looked for ways to extend it to work in other situations. When I found Voiceink and the open source code for it. I started immediately trying to come up with a solution. Since I had been dabbling in AI (using [Amp](https://ampcode.com/home), I quickly found away develop this proof of concept.
 
-**Only use this fork if you want to experiment with VoiceInk using Voiceitt. Otherwise, please use the official version from [Beingpax/VoiceInk](https://github.com/Beingpax/VoiceInk).**
 
-### Build from Source
+## Building for Local Use (No Apple Developer Certificate)
 
-For build instructions, see our [Building Guide](BUILDING.md).
+If you don't have an Apple Developer certificate, use `make local`:
+
+```bash
+git clone https://github.com/dmclark/VoiceInk
+cd VoiceInk
+sh scripts/sync-upstream.sh
+make local
+open ~/Downloads/VoiceInk.app
+```
+
+**Note:** The default branch is `feature/voiceitt` so that upstream changes (VoiceInk) can continue to be merged in.
+
+This builds VoiceInk with ad-hoc signing using a separate build configuration (`LocalBuild.xcconfig`) that requires no Apple Developer account.
+
+### How It Works
+
+The `make local` command uses:
+- `LocalBuild.xcconfig` to override signing and entitlements settings
+- `VoiceInk.local.entitlements` (stripped-down, no CloudKit/keychain groups)
+- `LOCAL_BUILD` Swift compilation flag for conditional code paths
+
+Your normal `make all` / `make build` commands are completely unaffected.
 
 ## Requirements
 
 - macOS 14.4 or later
+- Xcode 15.3 or later installed
+- Voiceitt API key & APP_ID
+- Email & Password for Voiceitt user account (profile to use)
+
+##  Configuration
+
+Once you have the app running, configure Voiceitt to be the transcription provider.
+
+- Open the app and go to the settings tab.
+- Click on the "AI Model" section.
+- Click on the "Cloud" tab.
+- Select Voiceitt as the transcription provider. (Last option in the list )
+- Enter your Voiceitt API key and APP_ID.
+- Enter your Voiceitt email and password.
 
 ## Documentation
 
 - [Building from Source](BUILDING.md) - Detailed instructions for building the project
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to VoiceInk
-- [Code of Conduct](CODE_OF_CONDUCT.md) - Our community standards
-
-## Contributing
-
-This project is **not accepting pull requests** at this time. You're welcome to fork and modify VoiceInk for your own use.
-
-You can still contribute by:
-- Reporting bugs via [issues](https://github.com/Beingpax/VoiceInk/issues)
-- Suggesting features or enhancements
-- Improving documentation via issues
-
-For more details, see our [Contributing Guidelines](CONTRIBUTING.md). For build instructions, see our [Building Guide](BUILDING.md).
-
-## License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-### Core Technology
-- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - High-performance inference of OpenAI's Whisper model
-- [FluidAudio](https://github.com/FluidInference/FluidAudio) - Used for Parakeet model implementation
-
-### Essential Dependencies
-- [Sparkle](https://github.com/sparkle-project/Sparkle) - Keeping VoiceInk up to date
-- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) - User-customizable keyboard shortcuts
-- [LaunchAtLogin](https://github.com/sindresorhus/LaunchAtLogin) - Launch at login functionality
-- [MediaRemoteAdapter](https://github.com/ejbills/mediaremote-adapter) - Media playback control during recording
-- [Zip](https://github.com/marmelroy/Zip) - File compression and decompression utilities
-- [SelectedTextKit](https://github.com/tisfeng/SelectedTextKit) - A modern macOS library for getting selected text
-- [Swift Atomics](https://github.com/apple/swift-atomics) - Low-level atomic operations for thread-safe concurrent programming
+- [Details on Voiceitt Integration](VOICEITT_INTEGRATION_PLAN.md) - Details on the Voiceitt integration - what has been done and what is left to do in this phase.
 
 
 ---
