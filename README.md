@@ -12,7 +12,7 @@ Voiceitt is a speech recognition service that supports  ß enables accurate real
 
 Currently, this is a successful proof of concept that is evolving. It uses the source code of Voiceink and adds Voiceitt as a transcription provider. It is designed to be a drop-in replacement for the existing transcription providers, allowing for the use of the Voiceitt service across all applications on the MacOS platform with the addition of the post-processing available in VoiceInk. This work is never intended to be merged back into Voiceink , and the other transcription providers may be eventually stripped out so that this is only a client for Voiceitt.
 
-This project developed out of personal passion and interest. [I am a developer/technologist (currently unemployed)](https://www.linkedin.com/in/dclark7/), who has cerebral palsy. I recently Googled out of frustration and found Voiceitt. I fell in love with it immediately --  it has been transformational. After discovering it had an API, I looked for ways to extend it to work in other situations. When I found Voiceink and the open source code for it. I started immediately trying to come up with a solution. Since I had been dabbling in AI (using [Amp](https://ampcode.com/home), I quickly found away develop this proof of concept.
+This project developed out of personal passion and interest. [I am a developer/technologist looking for work](https://www.linkedin.com/in/dclark7/), who has cerebral palsy. I recently Googled out of frustration and found Voiceitt. I fell in love with it immediately --  it has been transformational. After discovering it had an API, I looked for ways to extend it to work in other situations. When I found Voiceink and the open source code for it. I started immediately trying to come up with a solution. Since I had been dabbling in AI (using [Amp](https://ampcode.com/home), I quickly found away develop this proof of concept.
 
 
 ## Building for Local Use (No Apple Developer Certificate)
@@ -27,7 +27,7 @@ make local
 open ~/Downloads/VoiceInk.app
 ```
 
-**Note:** The default branch is `feature/voiceitt` so that upstream changes (VoiceInk) can continue to be merged in.
+**Note:** The default branch is `voiceitt` so that upstream changes (VoiceInk) can continue to be merged in.
 
 This builds VoiceInk with ad-hoc signing using a separate build configuration (`LocalBuild.xcconfig`) that requires no Apple Developer account.
 

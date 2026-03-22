@@ -7,9 +7,14 @@ set -euo pipefail
 #   ./scripts/sync-upstream.sh              # default feature branch: voiceitt
 #   ./scripts/sync-upstream.sh my-branch    # specify a different feature branch
 
-FEATURE_BRANCH="${1:-feature/voiceitt}"
+FEATURE_BRANCH="${1:-voiceitt}"
 UPSTREAM_REMOTE="upstream"
 UPSTREAM_BRANCH="main"
+
+if ! git remote get-url "$UPSTREAM_REMOTE" &>/dev/null; then
+  echo "==> Adding upstream remote..."
+  git remote add "$UPSTREAM_REMOTE" "https://github.com/Beingpax/VoiceInk.git"
+fi
 
 echo "==> Fetching upstream ($UPSTREAM_REMOTE)..."
 git fetch "$UPSTREAM_REMOTE"
