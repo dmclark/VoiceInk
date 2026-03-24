@@ -24,13 +24,19 @@
 - **Keep core pipeline:** Hotkey → record → stream to Voiceitt → enhance → paste at cursor.
 - **Keep power features:** PowerMode (per-app configs), global hotkeys, word replacements, transcription history, menu bar presence.
 - **Rebrand:** New name (VoiceITTinINK), new bundle ID, new app identity.
+- **Chrome-extension-style insertion:** Text is auto-inserted as recognition completes — no explicit "stop and transcribe" step. The user presses the hotkey to start, speaks, and recognized text flows into the active field continuously. Pressing the hotkey again (or releasing in hold mode) ends the session.
+- **Utterance correction & feedback:** In the History panel, users can correct a transcription and email it to Voiceitt support to improve their personal model.
+- **Hardcoded Voiceitt credentials:** App ID and API Key are bundled in the app (not user-provided), simplifying onboarding to email/password only.
 
-### Non-Goals
+### Non-Goals (v1)
 
 - Supporting any transcription provider other than Voiceitt.
 - Local model download/import/management.
 - Maintaining merge compatibility with upstream VoiceInk.
-- Mobile or non-macOS platforms.
+
+### Possible Future Goals
+
+- **Cross-platform expansion:** Selected companion and desktop variants for iOS/iPadOS, Windows, browser, and later Android, with platform-specific feature sets rather than full macOS parity. See [§11 Cross-Platform Feasibility](#11-cross-platform-feasibility) for analysis.
 
 ---
 
@@ -48,19 +54,18 @@ People with non-standard speech (dysarthria, speech differences, accents that st
 ## 4. Core User Flow
 
 ```
-1. User launches VoiceITTinINK → logs into Voiceitt (email/password + app ID/API key)
+1. User launches VoiceITTinINK → logs into Voiceitt (email/password only; App ID/API Key are bundled)
 2. User presses global hotkey (or holds for hands-free mode)
 3. Floating recorder panel appears → audio streams to Voiceitt via Socket.IO
-4. Voiceitt loads personal model (may take seconds) → partial transcripts appear in real time
-5. User releases hotkey / presses again to stop
-6. Final transcription returned → pipeline runs:
+4. Voiceitt loads personal model (may take seconds) → recognized text auto-inserts at cursor as it arrives (Chrome-extension-style continuous insertion)
+5. Pipeline runs on each recognized segment:
    a. Filter hallucinations/noise
    b. Format text (capitalize, punctuate)
    c. Apply word replacements
    d. Detect prompt commands
    e. AI enhancement (if enabled) — LLM reformats/fixes/follows instructions
-   f. Save to history
-   g. Paste at cursor in the active app
+   f. Paste at cursor in the active app
+6. User presses hotkey again (or releases in hold mode) → session ends, final transcript saved to history
 7. Optional: auto-send (Enter/Shift+Enter) if configured via PowerMode
 ```
 
@@ -70,11 +75,11 @@ People with non-standard speech (dysarthria, speech differences, accents that st
 
 ### 5.1 Voiceitt Transcription (Streaming Only)
 
-- **Auth:** Email/password login → JWT token + refresh token (stored in Keychain)
+- **Auth:** Email/password login → JWT token + refresh token (stored in Keychain). App ID and API Key are **hardcoded** in the app bundle — users never see or enter them.
 - **Transport:** Socket.IO (not raw WebSocket)
 - **Audio format:** 16 kHz, mono, PCM Int16, little-endian (already matches CoreAudioRecorder output)
 - **Model loading:** Per-user trained model on Voiceitt servers; can take several seconds
-- **Partial transcripts:** Real-time display in recorder panel
+- **Continuous insertion:** Recognized text is auto-inserted at the cursor as committed segments arrive (like Voiceitt's Chrome extension), rather than waiting for the user to stop recording. Partial transcripts are displayed in the recorder panel but not inserted.
 - **No batch/REST fallback:** Voiceitt is streaming-only. No silent fallback to another provider.
 
 ### 5.2 AI Enhancement (Preserved from VoiceInk)
@@ -93,7 +98,15 @@ People with non-standard speech (dysarthria, speech differences, accents that st
 - Override: AI enhancement on/off, specific prompt, AI provider/model, screen capture, auto-send key, custom hotkey
 - Active window detection via `ActiveWindowService`
 
-### 5.4 Core Infrastructure (Preserved)
+### 5.4 Utterance Correction & Feedback (New)
+
+- In the **History panel**, each transcription entry has a **"Correct & Send"** action.
+- User can edit the transcription text to provide the correct version of what they said.
+- Submitting emails the correction (original transcription + corrected text + optional audio) to Voiceitt support.
+- Purpose: helps Voiceitt improve the user's personal speech model over time.
+- Implementation: compose an email via `mailto:` or `MFMailComposeViewController`-equivalent with pre-filled subject, body, and attachment.
+
+### 5.5 Core Infrastructure (Preserved)
 
 - **Audio capture:** CoreAudioRecorder (AUHAL, not AVAudioEngine)
 - **Hotkeys:** Global hotkeys via KeyboardShortcuts, hold-to-record, middle-click, Fn key
@@ -268,7 +281,7 @@ The oracle analysis strongly favors continuing as a fork. Here is the full compa
 
 | # | Question | Impact |
 |---|---|---|
-| 1 | Should Voiceitt App ID / API Key be bundled in the app or remain user-provided? | UX complexity, distribution model |
+| 1 | ~~Should Voiceitt App ID / API Key be bundled in the app or remain user-provided?~~ **Decided: hardcode them.** | — |
 | 2 | Should `reset_alb_cookies` trigger automatic reconnection or user-facing retry? | Reliability vs. complexity |
 | 3 | Should transcription history be kept, simplified, or removed? | Scope, privacy |
 | 4 | What LLM enhancement providers to include by default? All LLMkit providers or a curated subset? | UX complexity |
@@ -276,6 +289,9 @@ The oracle analysis strongly favors continuing as a fork. Here is the full compa
 | 6 | Distribution: Mac App Store, direct download (Sparkle), or both? | Signing, sandboxing, updates |
 | 7 | Should the notch-style recorder UI be kept or simplified to mini-only? | Maintenance burden |
 | 8 | iCloud sync for vocabulary/word replacements — keep or remove? | Complexity, privacy |
+| 9 | How should AI enhancement interact with continuous insertion? Enhance each segment individually, or buffer and enhance on stop? | UX, latency |
+| 10 | What email address / format should utterance corrections be sent to? Does Voiceitt have a formal correction intake? | Feature design |
+| 11 | Should hardcoded App ID/API Key be obfuscated in the binary? | Security |
 
 ---
 
@@ -284,4 +300,82 @@ The oracle analysis strongly favors continuing as a fork. Here is the full compa
 - **Functional:** User can press hotkey → speak with non-standard speech → receive accurate transcription via Voiceitt → AI-enhanced text appears at cursor in any app.
 - **Performance:** End-to-end latency (stop recording → text pasted) under 5 seconds (excluding Voiceitt model load on first connect).
 - **Reliability:** No silent fallback to incompatible providers. Clear error messages for connection/auth failures.
-- **Simplicity:** Onboarding requires only Voiceitt credentials + mic permission + hotkey selection. No model downloads or multi-provider confusion.
+- **Simplicity:** Onboarding requires only Voiceitt email/password + mic permission + hotkey selection. No model downloads, API keys, or multi-provider confusion.
+
+---
+
+## 11. Cross-Platform Feasibility
+
+> Analysis provided by oracle. This section explores whether mobile and non-Mac platforms should be a possible future goal.
+
+### Summary
+
+**Voiceitt's transport (Socket.IO + 16kHz PCM) is highly portable. The macOS UX (global hotkeys, floating panels, paste-at-cursor) is not.** Future platforms would get adapted companion experiences, not full macOS parity.
+
+### Platform-by-Platform Assessment
+
+#### Windows Desktop — Most Realistic for Parity
+- Can support: global hotkeys, tray app, floating windows, clipboard/paste, active window detection
+- Desktop workflow is closest to macOS
+- **Best approach:** Electron app (good Socket.IO support, mature Windows tray/hotkey ecosystem)
+- **Effort:** XL
+- **Recommendation:** Highest-priority non-Mac platform if desktop parity matters
+
+#### Browser Extension (Chrome/Edge) — Broadest Reach
+- Covers: Windows, macOS, Linux, ChromeOS via browser
+- Aligns with Voiceitt's own Chrome/Edge extension strategy
+- Limited to browser text fields only (not system-wide)
+- **Effort:** L–XL
+- **Recommendation:** Strong candidate for broad reach, especially since Voiceitt already has browser extensions
+
+#### Web App / PWA — Widest Platform Coverage
+- Works on: any device with a browser (desktop + mobile)
+- Good: microphone access, Socket.IO, AI enhancement via HTTP, transcript editing
+- Bad: no global hotkeys outside browser, no paste into native apps, no floating utility behavior
+- **Different product shape** — great for in-browser dictation, poor substitute for system-wide utility
+- **Effort:** L–XL
+
+#### iOS / iPadOS — Companion App Only
+- **Feasible as a companion** (foreground dictation, note composer, share/export), **not as system-wide dictation**
+- No global hotkeys, no paste-at-cursor in other apps, no floating panels
+- Can share Swift code: Voiceitt auth, Socket.IO provider, SwiftData models, some SwiftUI, Keychain
+- Must rewrite: audio capture (AVAudioEngine, not AUHAL), all AppKit integrations
+- LLMkit supports iOS 17+ — dependency is compatible
+- **Effort:** XL
+
+#### Android — Separate Native App
+- Feasible but essentially a **full rewrite** — no Swift/AppKit code reuse
+- Potentially **better than iOS for cross-app text entry** via IME/keyboard or accessibility service
+- Requires: new audio layer (AudioRecord), new UI, new secure storage
+- **Effort:** XL
+
+#### Linux — Low Priority
+- Desktop integration is fragmented (X11 vs Wayland, inconsistent global hotkeys/tray/paste)
+- Only realistic as: web app, or Electron "best effort"
+- **Effort:** XL + ongoing platform risk
+- **Recommendation:** Do not plan early
+
+### What's Portable vs. What Must Be Rewritten
+
+| Layer | Portability |
+|---|---|
+| Voiceitt auth flow (HTTPS) | **High** — portable everywhere |
+| Socket.IO streaming + 16kHz PCM | **High** — libraries exist on all platforms |
+| AI enhancement prompt logic | **High** — portable concepts |
+| LLMkit (LLM API calls) | **Apple only** (macOS 14+ / iOS 17+) — abstract behind a protocol for future platforms |
+| SwiftUI / SwiftData / Keychain | **Apple only** |
+| Audio capture (AUHAL) | **macOS only** — each platform has its own API |
+| Global hotkeys / floating panels | **Desktop only** — each OS has its own mechanism |
+| Paste-at-cursor / active app detection | **Desktop only** — per-OS implementation |
+
+### Key Blocker: Auth Credentials
+
+The hardcoded App ID / API Key means shipping developer credentials in client apps on multiple platforms. A public multi-platform release may eventually need a **small backend/token broker** to avoid exposing these in web/mobile binaries.
+
+### Recommended Expansion Order
+
+1. **macOS native** (v1 — current)
+2. **Browser extension** or **Windows desktop** (most realistic next steps)
+3. **iOS companion app** (if Apple ecosystem matters)
+4. **Android** (separate effort, only if demand exists)
+5. **Linux** (best-effort via web/Electron only)
