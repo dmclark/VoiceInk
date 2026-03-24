@@ -62,6 +62,6 @@ Once you have the app running, configure Voiceitt to be the transcription provid
 
 - [Building from Source](BUILDING.md) - Detailed instructions for building the project
 - [Details on Voiceitt Integration](VOICEITT_INTEGRATION_PLAN.md) - Details on the Voiceitt integration - what has been done and what is left to do in this phase.
-
+- [Plans for actual product](notes/PRD.md) - Plans for the actual product (Product Requirements Document)
 
 ---
