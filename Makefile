@@ -72,6 +72,9 @@ local: check setup
 		echo "Build complete! App saved to: ~/Downloads/VoiceInk.app"; \
 		echo "Run with: open ~/Downloads/VoiceInk.app"; \
 		echo ""; \
+		echo "Before first use, grant Accessibility access in System Settings -> Privacy & Security -> Accessibility so VoiceInk can paste into other apps."; \
+		echo "If transcription still does not paste, enable 'Use AppleScript Paste' in VoiceInk Settings."; \
+		echo ""; \
 		echo "Limitations of local builds:"; \
 		echo "  - No iCloud dictionary sync"; \
 		echo "  - No automatic updates (pull new code and rebuild to update)"; \
