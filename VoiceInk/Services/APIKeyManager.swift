@@ -20,6 +20,7 @@ final class APIKeyManager {
         "mistral": "mistralAPIKey",
         "elevenlabs": "elevenLabsAPIKey",
         "soniox": "sonioxAPIKey",
+        "speechmatics": "speechmaticsAPIKey",
         "openai": "openAIAPIKey",
         "anthropic": "anthropicAPIKey",
         "openrouter": "openRouterAPIKey",
@@ -35,6 +36,7 @@ final class APIKeyManager {
         "MistralAPIKey": "mistralAPIKey",
         "ElevenLabsAPIKey": "elevenLabsAPIKey",
         "SonioxAPIKey": "sonioxAPIKey",
+        "SpeechmaticsAPIKey": "speechmaticsAPIKey",
         "OpenAIAPIKey": "openAIAPIKey",
         "AnthropicAPIKey": "anthropicAPIKey",
         "OpenRouterAPIKey": "openRouterAPIKey"
@@ -203,6 +205,8 @@ final class APIKeyManager {
             return "ElevenLabsAPIKey"
         case "soniox":
             return "SonioxAPIKey"
+        case "speechmatics":
+            return "SpeechmaticsAPIKey"
         case "openai":
             return "OpenAIAPIKey"
         case "anthropic":
