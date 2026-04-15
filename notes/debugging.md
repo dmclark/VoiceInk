@@ -49,3 +49,19 @@ When Voiceitt streaming failed (due to Root Cause 1), the `StreamingTranscriptio
 - Filter Console.app by `VoiceittStreamingProvider` or `VoiceittAuthService` to see connection/auth logs.
 - Socket.IO errors during setup are now logged with the message content.
 - Token refresh failures are now logged (previously swallowed by `try?`).
+
+### Transcription Log
+Transcription history is stored in a SwiftData SQLite database at:
+
+~/Library/Application Support/com.prakashjoshipax.VoiceInk/default.store
+
+This is a standard SQLite file. You can query it externally with sqlite3:
+
+sqlite3 ~/Library/Application\ Support/com.prakashjoshipax.VoiceInk/default.store \
+  "SELECT * FROM ZTRANSCRIPTION;"
+
+The Transcription model has columns: id (UUID), text, enhancedText, timestamp, duration, audioFileURL, transcriptionModelName, aiEnhancementModelName, promptName, transcriptionDuration, enhancementDuration, powerModeName, and transcriptionStatus. Note that SwiftData/Core Data prefixes column names with Z (e.g., ZTEXT, ZTIMESTAMP), so explore the schema first with .schema to see exact names.
+
+```
+sqlite3 ~/Library/Application\ Support/com.prakashjoshipax.VoiceInk/default.store \
+  "SELECT ztimestamp, zduration FROM ZTRANSCRIPTION;"
