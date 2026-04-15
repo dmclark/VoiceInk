@@ -19,7 +19,7 @@ import os
 import sqlite3
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # ── Configuration ────────────────────────────────────────────────────────────
@@ -145,7 +145,8 @@ def load_transcriptions(db_path: str = SWIFTDATA_DB) -> list[dict]:
         ts = r["ZTIMESTAMP"]
         if ts is None:
             continue
-        dt = CORE_DATA_EPOCH + timedelta(seconds=ts)
+        dt_utc = CORE_DATA_EPOCH.replace(tzinfo=timezone.utc) + timedelta(seconds=ts)
+        dt = dt_utc.astimezone().replace(tzinfo=None)  # convert to local time
         rows.append(
             {
                 "datetime": dt,
@@ -242,19 +243,33 @@ def print_report(correlated: list[dict], transcriptions: list[dict]):
         print("   Possible causes: failed requests, retries, streaming reconnects,")
         print("   or requests from other clients using the same API key.")
 
-    # Detail listing
-    print(f"\n{'─' * 90}")
-    print("DETAILED LOCAL TRANSCRIPTIONS (Voiceitt only)")
-    print(f"{'─' * 90}")
-    print(f"{'Time':<22} {'Dur(s)':>7} {'Txn(s)':>7} {'Status':<12} {'Text'}")
-    print("-" * 90)
+    # Detail listing grouped by hour
+    print(f"\n{'─' * 95}")
+    print("DETAILED LOCAL TRANSCRIPTIONS (Voiceitt only) — grouped by hour")
+    print(f"{'─' * 95}")
+
+    by_hour: dict[str, list[dict]] = defaultdict(list)
     for t in transcriptions:
-        time_str = t["datetime"].strftime("%Y-%m-%d %H:%M:%S")
-        text_preview = t["text"][:50].replace("\n", " ")
-        print(
-            f"{time_str:<22} {t['duration_s']:>7.1f} {t['transcription_duration_s']:>7.1f} "
-            f"{t['status']:<12} {text_preview}"
-        )
+        by_hour[t["hour_key"]].append(t)
+
+    for hour_key in sorted(by_hour):
+        group = by_hour[hour_key]
+        total_dur = sum(t["duration_s"] for t in group)
+        total_txn = sum(t["transcription_duration_s"] for t in group)
+        count = len(group)
+
+        print(f"\n  ┌─ {hour_key}  ({count} transcription{'s' if count != 1 else ''}, "
+              f"total recording: {total_dur:.1f}s, total txn time: {total_txn:.1f}s)")
+        print(f"  │ {'Time':<20} {'Dur(s)':>7} {'Txn(s)':>7} {'Status':<12} {'Text'}")
+        print(f"  │ {'-' * 88}")
+        for t in group:
+            time_str = t["datetime"].strftime("%H:%M:%S")
+            text_preview = t["text"][:50].replace("\n", " ")
+            print(
+                f"  │ {time_str:<20} {t['duration_s']:>7.1f} {t['transcription_duration_s']:>7.1f} "
+                f"{t['status']:<12} {text_preview}"
+            )
+        print(f"  └─ subtotal: {total_dur:>7.1f} {total_txn:>7.1f}")
 
 
 def export_csv(correlated: list[dict], output_path: str):
@@ -272,7 +287,9 @@ def main():
     )
     parser.add_argument(
         "voiceitt_csv",
-        help="Path to Voiceitt usage CSV exported from developer.voiceitt.com/dashboard/usage",
+        nargs="?",
+        default=None,
+        help="Path to Voiceitt usage CSV exported from developer.voiceitt.com/dashboard/usage (omit for local-only)",
     )
     parser.add_argument(
         "-o", "--output",
@@ -297,7 +314,7 @@ def main():
     transcriptions = load_transcriptions(db_path)
     print(f"   Found {len(transcriptions)} Voiceitt transcriptions in local DB.")
 
-    if args.local_only:
+    if args.local_only or args.voiceitt_csv is None:
         print_report([], transcriptions)
         return
 
