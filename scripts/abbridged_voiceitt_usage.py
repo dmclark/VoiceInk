@@ -201,6 +201,7 @@ def correlate(
         api_count = voiceitt_usage.get(hour, 0)
         local_txns = local_by_hour.get(hour, [])
         local_count = len(local_txns)
+        local_time_by_hour = sum(t["duration_s"] for t in local_txns)
         avg_duration = (
             sum(t["duration_s"] for t in local_txns) / local_count
             if local_count
@@ -216,6 +217,7 @@ def correlate(
             {
                 "hour": hour,
                 "api_requests": api_count,
+                "local_time_by_hour": local_time_by_hour,
                 "local_transcriptions": local_count,
                 "delta": api_count - local_count,
                 "avg_recording_duration_s": round(avg_duration, 1),
@@ -235,8 +237,12 @@ def print_report(correlated: list[dict], transcriptions: list[dict]):
     # Summary
     total_api = sum(r["api_requests"] for r in correlated)
     total_local = sum(r["local_transcriptions"] for r in correlated)
+    total_local_time = sum(r["local_time_by_hour"] for r in correlated)
+    credits_per_second = total_api / total_local_time
     print(f"\n📊 Summary:")
-    print(f"   Total API usage (Voiceitt dashboard):      {total_api:.2f}")
+    print(f"   Total API credits used:                    {total_api:.2f}")
+    print(f"   Total local Voiceitt time:                 {total_local_time}")
+    print(f"   Credits per second:                        {credits_per_second:.2f}") 
     print(f"   Total local Voiceitt transcriptions:       {total_local}")
     if total_api:
         print(f"   Avg usage per transcription:               {total_api / max(total_local, 1):.2f}")
@@ -248,43 +254,17 @@ def print_report(correlated: list[dict], transcriptions: list[dict]):
 
     # Hourly table
     if correlated:
-        print(f"\n{'Hour':<20} {'API Usage':>10} {'Local Txns':>12} {'Avg Rec(s)':>11} {'Avg Txn(s)':>11}")
+        print(f"\n{'Hour':<20} {'API Usage':>12} {'Local Time':>13} {'Credits / Sec':>12}")
         print("-" * 70)
 
         for r in correlated:
             print(
-                f"{r['hour']:<20} {r['api_requests']:>10.2f} {r['local_transcriptions']:>12} "
-                f"{r['avg_recording_duration_s']:>11.1f} "
-                f"{r['avg_transcription_time_s']:>11.1f}"
+                f"{r['hour']:<20} {r['api_requests']:>10.2f} "
+                f"{r['local_time_by_hour']:>12.1f} "
+                f"{r['api_requests'] / r['local_time_by_hour']:>11.2f} "
             )
-
-    # Detail listing grouped by hour
-    print(f"\n{'─' * 95}")
-    print("DETAILED LOCAL TRANSCRIPTIONS (Voiceitt only) — grouped by hour")
-    print(f"{'─' * 95}")
-
-    by_hour: dict[str, list[dict]] = defaultdict(list)
-    for t in transcriptions:
-        by_hour[t["hour_key"]].append(t)
-
-    for hour_key in sorted(by_hour):
-        group = by_hour[hour_key]
-        total_dur = sum(t["duration_s"] for t in group)
-        total_txn = sum(t["transcription_duration_s"] for t in group)
-        count = len(group)
-
-        print(f"\n  ┌─ {hour_key}  ({count} transcription{'s' if count != 1 else ''}, "
-              f"total recording: {total_dur:.1f}s, total txn time: {total_txn:.1f}s)")
-        print(f"  │ {'Time':<20} {'Dur(s)':>7} {'Txn(s)':>7} {'Status':<12} {'Text'}")
-        print(f"  │ {'-' * 88}")
-        # for t in group:
-        #     time_str = t["datetime"].strftime("%H:%M:%S")
-        #     text_preview = t["text"][:50].replace("\n", " ")
-        #     print(
-        #         f"  │ {time_str:<20} {t['duration_s']:>7.1f} {t['transcription_duration_s']:>7.1f} "
-        #         f"{t['status']:<12} {text_preview}"
-        #     )
-        print(f"  └─ subtotal: {total_dur:>7.1f} {total_txn:>7.1f}")
+        print(f"\n{'─' * 70}")
+        print(f"{'TOTALS:':<20} {total_api:>10.2f} {total_local_time:>12.1f} {credits_per_second:>11.2f}")
 
 
 def export_csv(correlated: list[dict], output_path: str):
